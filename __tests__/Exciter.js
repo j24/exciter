@@ -124,6 +124,35 @@ test('deleteSuccess', (done) => {
     });
 });
 
+test('deleteIfExistsSuccess', (done) => {
+  expect.assertions(1);
+  const pk = {
+    userId: '123456',
+    uuid: '123-123-123',
+  };
+  const deleteStub = sinon.stub(exciter.dynamo, 'delete').callsFake(awsPromiseResolve(pk));
+  return exciter.delete(pk, 'fake', true)
+    .then((res) => {
+      sinon.assert.calledWith(deleteStub, {
+        TableName: 'fake',
+        Key: pk,
+        ConditionExpression: 'attribute_exists(#userId) AND attribute_exists(#uuid)',
+        ExpressionAttributeNames: {
+          '#userId': 'userId',
+          '#uuid': 'uuid',
+        },
+      });
+      expect(res).toEqual(pk);
+    })
+    .catch((err) => {
+      expect(err).toBeUndefined();
+    })
+    .then(() => {
+      exciter.dynamo.delete.restore();
+      done();
+    });
+});
+
 test('deleteFailReject', (done) => {
   expect.assertions(1);
   const pk = {
